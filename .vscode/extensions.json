@@ -1,0 +1,9 @@
+{
+	"recommendations": [
+		"maximedenes.vscoq",
+		"mr-konn.generic-input-method",
+		"ms-vscode.makefile-tools",
+		"wayou.vscode-todo-highlight",
+	],
+	"unwantedRecommendations": []
+}

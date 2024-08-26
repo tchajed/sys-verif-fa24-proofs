@@ -1,0 +1,18 @@
+*.vo
+*.vos
+*.vok
+.coqdeps.d
+.Makefile.coq.d
+*.glob
+*.cache
+*.aux
+.coq-native/
+Makefile.coq
+Makefile.coq.conf
+# for perennial's coqc.py timing
+.timing.sqlite3
+# SF's extraction chapter
+*.ml
+*.mli
+# hw submissions
+*.tar.gz

@@ -1,0 +1,38 @@
+-Q src/sys_verif sys_verif
+-arg -w -arg -ssr-search-moved
+-arg -w -arg +deprecated-instance-without-locality
+-arg -w -arg -future-coercion-class-field
+-arg -w -arg +deprecated-hint-rewrite-without-locality
+-arg -w -arg -deprecated-field-instance-without-locality
+-arg -w -arg +deprecated-tactic-notation
+-arg -w -arg -deprecated-since-8.19
+-arg -w -arg -deprecated-since-8.20
+-arg -w -arg -notation-incompatible-prefix
+-arg -w -arg -deprecated-typeclasses-transparency-without-locality
+-arg -w -arg -notation-overridden,-redundant-canonical-projection,-unknown-warning,-argument-scope-delimiter
+
+# copy perennial's dependencies
+-Q perennial/external/stdpp/stdpp stdpp
+-Q perennial/external/stdpp/stdpp_unstable stdpp.unstable
+-Q perennial/external/stdpp/stdpp_bitvector stdpp.bitvector
+-Q perennial/external/iris/iris iris
+-Q perennial/external/iris/iris_deprecated iris.deprecated
+-Q perennial/external/iris/iris_unstable iris.unstable
+-Q perennial/external/iris/iris_heap_lang iris.heap_lang
+-Q perennial/external/coqutil/src/coqutil coqutil
+-Q perennial/external/record-update/src RecordUpdate
+-Q perennial/external/coq-tactical/src Tactical
+-Q perennial/external/iris-named-props/src iris_named_props
+# perennial itself
+-Q perennial/src Perennial
+-Q perennial/new_trusted_code New.code
+-Q perennial/new New
+-Q perennial/external/Goose Goose
+
+# local goose output
+-Q src/Goose Goose
+# Software Foundations
+-Q src/software_foundations LF
+# silence some extraction warnings
+-arg -require -arg "Coq.extraction.Extraction"
+-arg -set -arg "'Extraction Output Directory=src/software_foundations/'"

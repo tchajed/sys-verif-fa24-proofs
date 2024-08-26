@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -eu
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+# run from repo root
+cd "$DIR/.."
+
+file="hw.tar.gz"
+
+# shellcheck disable=SC2046
+tar -czf "$file" \
+    $(find src -name "*.v") \
+    _CoqProject Makefile \
+    $(find go -name "*.go")
+echo "created $file"
