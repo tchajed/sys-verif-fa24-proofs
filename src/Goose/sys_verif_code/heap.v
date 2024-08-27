@@ -72,6 +72,73 @@ Definition Node__Append: val :=
         "next" ::= "Node__Append" (struct.loadF Node "next" "l") "other"
       ]).
 
+(* queue.go *)
+
+Definition Stack := struct.decl [
+  "elements" :: slice.T uint64T
+].
+
+Definition NewStack: val :=
+  rec: "NewStack" <> :=
+    struct.new Stack [
+      "elements" ::= NewSlice uint64T #0
+    ].
+
+Definition Stack__Push: val :=
+  rec: "Stack__Push" "s" "x" :=
+    struct.storeF Stack "elements" "s" (SliceAppend uint64T (struct.loadF Stack "elements" "s") "x");;
+    #().
+
+(* Pop returns the most recently pushed element. The boolean indicates success,
+   which is false if the stack was empty. *)
+Definition Stack__Pop: val :=
+  rec: "Stack__Pop" "s" :=
+    (if: (slice.len (struct.loadF Stack "elements" "s")) = #0
+    then (#0, #false)
+    else
+      let: "x" := SliceGet uint64T (struct.loadF Stack "elements" "s") ((slice.len (struct.loadF Stack "elements" "s")) - #1) in
+      struct.storeF Stack "elements" "s" (SliceTake (struct.loadF Stack "elements" "s") ((slice.len (struct.loadF Stack "elements" "s")) - #1));;
+      ("x", #true)).
+
+Definition Queue := struct.decl [
+  "back" :: ptrT;
+  "front" :: ptrT
+].
+
+Definition NewQueue: val :=
+  rec: "NewQueue" <> :=
+    struct.mk Queue [
+      "back" ::= NewStack #();
+      "front" ::= NewStack #()
+    ].
+
+Definition Queue__Push: val :=
+  rec: "Queue__Push" "q" "x" :=
+    Stack__Push (struct.get Queue "back" "q") "x";;
+    #().
+
+Definition Queue__emptyBack: val :=
+  rec: "Queue__emptyBack" "q" :=
+    Skip;;
+    (for: (λ: <>, #true); (λ: <>, Skip) := λ: <>,
+      let: ("x", "ok") := Stack__Pop (struct.get Queue "back" "q") in
+      (if: "ok"
+      then
+        Stack__Push (struct.get Queue "front" "q") "x";;
+        Continue
+      else Break));;
+    #().
+
+Definition Queue__Pop: val :=
+  rec: "Queue__Pop" "q" :=
+    let: ("x", "ok") := Stack__Pop (struct.get Queue "front" "q") in
+    (if: "ok"
+    then ("x", #true)
+    else
+      Queue__emptyBack "q";;
+      let: ("x", "ok2") := Stack__Pop (struct.get Queue "front" "q") in
+      ("x", "ok2")).
+
 (* search_tree.go *)
 
 Definition SearchTree := struct.decl [
