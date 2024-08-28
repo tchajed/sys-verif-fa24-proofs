@@ -26,6 +26,7 @@
 # perennial itself
 -Q perennial/src Perennial
 -Q perennial/new_trusted_code New.code
+-Q perennial/new_code_axioms New.code
 -Q perennial/new New
 -Q perennial/external/Goose Goose
 
