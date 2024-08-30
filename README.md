@@ -8,4 +8,13 @@ the [setup
 instructions](https://tchajed.github.io/sys-verif-fa24/assignments/setup.html)
 on the course website. The instructions also describe how to set up Coq.
 
+After cloning the repo, initialize the submodules with `git submodule update
+--init --recursive`. If you don't do this, the build will fail.
+
 Once you have Coq installed, build the provided code by running `make`.
+
+## Getting updates
+
+You'll need to use `git pull` to get updates and new assignments. If you see
+that there are local changes to the `perennial` submodule, run `git submodule
+update --init --recursive`.
