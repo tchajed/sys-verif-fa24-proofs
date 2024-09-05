@@ -1,7 +1,7 @@
 SRC_DIRS := 'src' 'perennial'
 ALL_VFILES := $(shell find $(SRC_DIRS) \
 							-not -path "perennial/external/coqutil/etc/coq-scripts/*" \
-						    -not -path "perennial/new*/*" \
+							-not -path "perennial/new*/*" \
 							-name "*.v")
 PROJ_VFILES := $(shell find 'src/sys_verif' -name "*.v")
 SF_VFILES := $(shell find 'src/software_foundations' -name "*.v")
@@ -16,16 +16,17 @@ COQC := coqc
 
 default: vo
 
-sf: $(SF_VFILES:.v=.vo)
-
 # PROJ_VFILES includes src/sys_verif/software_foundations.v which builds a subset of SF
-vo: $(PROJ_VFILES:.v=.vo)
-vos: $(PROJ_VFILES:.v=.vos)
-vok: $(PROJ_VFILES:.v=.vok)
+vo: $(PROJ_VFILES:.v=.vo) update-submodules
+vos: $(PROJ_VFILES:.v=.vos) update-submodules
+vok: $(PROJ_VFILES:.v=.vok) update-submodules
+
+# build all of Software Foundations
+sf: $(SF_VFILES:.v=.vo)
 
 all: vo sf
 
-.coqdeps.d: $(ALL_VFILES) _CoqProject
+.coqdeps.d: $(ALL_VFILES) _CoqProject | update-submodules
 	@echo "COQDEP $@"
 	$(Q)coqdep -vos -f _CoqProject $(ALL_VFILES) > $@
 
@@ -45,6 +46,13 @@ endif
 %.vok: %.v _CoqProject | .coqdeps.d
 	@echo "COQC -vok $<"
 	$(Q)$(COQC) $(COQPROJECT_ARGS) -vok $(COQ_ARGS) $< -o $@
+
+.PHONY: update-submodules
+update-submodules:
+	@if git submodule status | egrep -q '^[-+]' ; then \
+		echo "INFO: Updating git submodules"; \
+		git submodule update --init --recursive; \
+  fi
 
 clean:
 	@echo "CLEAN vo glob aux"
