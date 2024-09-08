@@ -3,7 +3,6 @@ From Perennial.goose_lang Require Import prelude.
 
 Section code.
 Context `{ext_ty: ext_types}.
-Local Coercion Var' s: expr := Var s.
 
 Definition atomicPtr := struct.decl [
   "mu" :: ptrT;
@@ -13,22 +12,22 @@ Definition atomicPtr := struct.decl [
 Definition newAtomicPtr: val :=
   rec: "newAtomicPtr" "m" :=
     struct.new atomicPtr [
-      "mu" ::= lock.new #();
+      "mu" ::= newMutex #();
       "val" ::= "m"
     ].
 
 Definition atomicPtr__load: val :=
   rec: "atomicPtr__load" "a" :=
-    lock.acquire (struct.loadF atomicPtr "mu" "a");;
+    Mutex__Lock (struct.loadF atomicPtr "mu" "a");;
     let: "val" := struct.loadF atomicPtr "val" "a" in
-    lock.release (struct.loadF atomicPtr "mu" "a");;
+    Mutex__Unlock (struct.loadF atomicPtr "mu" "a");;
     "val".
 
 Definition atomicPtr__store: val :=
   rec: "atomicPtr__store" "a" "m" :=
-    lock.acquire (struct.loadF atomicPtr "mu" "a");;
+    Mutex__Lock (struct.loadF atomicPtr "mu" "a");;
     struct.storeF atomicPtr "val" "a" "m";;
-    lock.release (struct.loadF atomicPtr "mu" "a");;
+    Mutex__Unlock (struct.loadF atomicPtr "mu" "a");;
     #().
 
 (* A HashMap that supports concurrent reads by deep-cloning the map on every
@@ -51,7 +50,7 @@ Definition NewHashMap: val :=
     let: "m" := ref_to (mapT uint64T) (NewMap uint64T uint64T #()) in
     struct.new HashMap [
       "clean" ::= newAtomicPtr (![mapT uint64T] "m");
-      "mu" ::= lock.new #()
+      "mu" ::= newMutex #()
     ].
 
 Definition HashMap__Load: val :=
@@ -76,20 +75,20 @@ Definition HashMap__dirty: val :=
 
 Definition HashMap__Store: val :=
   rec: "HashMap__Store" "h" "key" "value" :=
-    lock.acquire (struct.loadF HashMap "mu" "h");;
+    Mutex__Lock (struct.loadF HashMap "mu" "h");;
     let: "dirty" := HashMap__dirty "h" in
     MapInsert "dirty" "key" "value";;
     atomicPtr__store (struct.loadF HashMap "clean" "h") "dirty";;
-    lock.release (struct.loadF HashMap "mu" "h");;
+    Mutex__Unlock (struct.loadF HashMap "mu" "h");;
     #().
 
 Definition HashMap__Delete: val :=
   rec: "HashMap__Delete" "h" "key" :=
-    lock.acquire (struct.loadF HashMap "mu" "h");;
+    Mutex__Lock (struct.loadF HashMap "mu" "h");;
     let: "dirty" := HashMap__dirty "h" in
     MapDelete "dirty" "key";;
     atomicPtr__store (struct.loadF HashMap "clean" "h") "dirty";;
-    lock.release (struct.loadF HashMap "mu" "h");;
+    Mutex__Unlock (struct.loadF HashMap "mu" "h");;
     #().
 
 End code.

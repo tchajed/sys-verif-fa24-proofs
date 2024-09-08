@@ -4,7 +4,6 @@ From Goose Require github_com.goose_lang.std.
 
 Section code.
 Context `{ext_ty: ext_types}.
-Local Coercion Var' s: expr := Var s.
 
 (* barrier.go *)
 
@@ -21,8 +20,8 @@ Definition Barrier := struct.decl [
 (* Create a new barrier waiting for no threads. *)
 Definition NewBarrier: val :=
   rec: "NewBarrier" <> :=
-    let: "mu" := lock.new #() in
-    let: "cond" := lock.newCond "mu" in
+    let: "mu" := newMutex #() in
+    let: "cond" := NewCond "mu" in
     struct.new Barrier [
       "numWaiting" ::= #0;
       "mu" ::= "mu";
@@ -32,34 +31,34 @@ Definition NewBarrier: val :=
 (* Add `n` threads that the barrier is waiting to call `Done()`. *)
 Definition Barrier__Add: val :=
   rec: "Barrier__Add" "b" "n" :=
-    lock.acquire (struct.loadF Barrier "mu" "b");;
+    Mutex__Lock (struct.loadF Barrier "mu" "b");;
     struct.storeF Barrier "numWaiting" "b" (std.SumAssumeNoOverflow (struct.loadF Barrier "numWaiting" "b") "n");;
-    lock.release (struct.loadF Barrier "mu" "b");;
+    Mutex__Unlock (struct.loadF Barrier "mu" "b");;
     #().
 
 (* Mark one thread as done. *)
 Definition Barrier__Done: val :=
   rec: "Barrier__Done" "b" :=
-    lock.acquire (struct.loadF Barrier "mu" "b");;
+    Mutex__Lock (struct.loadF Barrier "mu" "b");;
     (if: (struct.loadF Barrier "numWaiting" "b") = #0
     then Panic "Done() called too many times"
     else #());;
     struct.storeF Barrier "numWaiting" "b" ((struct.loadF Barrier "numWaiting" "b") - #1);;
     (if: (struct.loadF Barrier "numWaiting" "b") = #0
-    then lock.condBroadcast (struct.loadF Barrier "cond" "b")
+    then Cond__Broadcast (struct.loadF Barrier "cond" "b")
     else #());;
-    lock.release (struct.loadF Barrier "mu" "b");;
+    Mutex__Unlock (struct.loadF Barrier "mu" "b");;
     #().
 
 (* Wait blocks until all threads pending with `Add()` have called `Done()`. *)
 Definition Barrier__Wait: val :=
   rec: "Barrier__Wait" "b" :=
-    lock.acquire (struct.loadF Barrier "mu" "b");;
+    Mutex__Lock (struct.loadF Barrier "mu" "b");;
     Skip;;
     (for: (λ: <>, (struct.loadF Barrier "numWaiting" "b") > #0); (λ: <>, Skip) := λ: <>,
-      lock.condWait (struct.loadF Barrier "cond" "b");;
+      Cond__Wait (struct.loadF Barrier "cond" "b");;
       Continue);;
-    lock.release (struct.loadF Barrier "mu" "b");;
+    Mutex__Unlock (struct.loadF Barrier "mu" "b");;
     #().
 
 (* concurrent.go *)
@@ -73,21 +72,21 @@ Definition NewAtomicInt: val :=
   rec: "NewAtomicInt" <> :=
     struct.new AtomicInt [
       "x" ::= #0;
-      "mu" ::= lock.new #()
+      "mu" ::= newMutex #()
     ].
 
 Definition AtomicInt__Get: val :=
   rec: "AtomicInt__Get" "i" :=
-    lock.acquire (struct.loadF AtomicInt "mu" "i");;
+    Mutex__Lock (struct.loadF AtomicInt "mu" "i");;
     let: "x" := struct.loadF AtomicInt "x" "i" in
-    lock.release (struct.loadF AtomicInt "mu" "i");;
+    Mutex__Unlock (struct.loadF AtomicInt "mu" "i");;
     "x".
 
 Definition AtomicInt__Inc: val :=
   rec: "AtomicInt__Inc" "i" "y" :=
-    lock.acquire (struct.loadF AtomicInt "mu" "i");;
+    Mutex__Lock (struct.loadF AtomicInt "mu" "i");;
     struct.storeF AtomicInt "x" "i" ((struct.loadF AtomicInt "x" "i") + "y");;
-    lock.release (struct.loadF AtomicInt "mu" "i");;
+    Mutex__Unlock (struct.loadF AtomicInt "mu" "i");;
     #().
 
 Definition ParallelAdd1: val :=
@@ -108,22 +107,22 @@ Definition ParallelAdd1: val :=
 Definition ParallelAdd2: val :=
   rec: "ParallelAdd2" <> :=
     let: "x" := ref_to uint64T #0 in
-    let: "m" := lock.new #() in
+    let: "m" := newMutex #() in
     let: "b" := NewBarrier #() in
     Barrier__Add "b" #1;;
     Barrier__Add "b" #1;;
-    Fork (lock.acquire "m";;
+    Fork (Mutex__Lock "m";;
           "x" <-[uint64T] (std.SumAssumeNoOverflow (![uint64T] "x") #2);;
-          lock.release "m";;
+          Mutex__Unlock "m";;
           Barrier__Done "b");;
-    Fork (lock.acquire "m";;
+    Fork (Mutex__Lock "m";;
           "x" <-[uint64T] (std.SumAssumeNoOverflow (![uint64T] "x") #2);;
-          lock.release "m";;
+          Mutex__Unlock "m";;
           Barrier__Done "b");;
     Barrier__Wait "b";;
-    lock.acquire "m";;
+    Mutex__Lock "m";;
     let: "x_now" := ![uint64T] "x" in
-    lock.release "m";;
+    Mutex__Unlock "m";;
     "x_now".
 
 End code.
