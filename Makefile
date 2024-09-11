@@ -49,7 +49,7 @@ endif
 
 .PHONY: update-submodules
 update-submodules:
-	@if git submodule status | egrep -q '^[-+]' ; then \
+	@if [ -d .git/ ] && git submodule status | egrep -q '^[-+]' ; then \
 		echo "INFO: Updating git submodules"; \
 		git submodule update --init --recursive; \
   fi
