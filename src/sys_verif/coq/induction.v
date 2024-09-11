@@ -281,8 +281,6 @@ can also use `{ ... }` (used once above), which are often preferred if the proof
 of the first subgoal is small compared to the rest of the proof (such as the
 single-line `{ reflexivity. }` above). |*)
 
-(*| ## Exercise: safe vs unsafe tactics |*)
-
 Lemma add_comm n1 n2 :
   n1 + n2 = n2 + n1.
 Proof.
@@ -295,7 +293,7 @@ Proof.
     rewrite add_0_r.
     reflexivity.
   - simpl.
-    (*| ### Exercise: what lemma to prove? |*)
+    (*| ## Exercise: what lemma to prove? |*)
 Abort.
 
 
