@@ -1,5 +1,5 @@
 {
-  "image": "tchajed/sys-verif:latest",
+  "image": "tchajed/sys-verif:v2.0.0",
   "remoteUser": "vscode",
   "containerUser": "vscode",
   "customizations": {
