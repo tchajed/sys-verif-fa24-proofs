@@ -17,6 +17,7 @@
   "vscoq.goals.diff.mode": "off",
   "vscoq.completion.enable": false,
   "vscoq.proof.mode": 0,
+  "editor.unicodeHighlight.ambiguousCharacters": false,
   "generic-input-methods.input-methods": [
     {
       "name": "Iris Math",
