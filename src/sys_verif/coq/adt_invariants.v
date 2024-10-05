@@ -343,7 +343,7 @@ many operations that can interact with each other. |*)
 
 End list_map.
 
-(*| ## Extension 2: abstraction relations
+(*| ## Extension 2: abstraction relations {#abstraction-relations}
 
 There's one more extension beyond invariants that allows us to verify even more
 examples. Instead of an abstraction function `abs : T → S`, we can instead have

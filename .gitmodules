@@ -1,4 +1,4 @@
 [submodule "perennial"]
 	path = perennial
 	url = https://github.com/mit-pdos/perennial
-	branch = master
+	branch = db4fa2cf8d835d91f0
