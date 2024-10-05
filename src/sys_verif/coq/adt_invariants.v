@@ -2,8 +2,11 @@ From sys_verif Require Import options.
 From stdpp Require Import numbers fin_sets gmap.
 #[local] Open Scope Z_scope.
 
-(*| ## Lecture 5: ADT specification with invariants |*)
-(*| ### Learning outcomes
+(*| ## Lecture 5: ADT specification with invariants
+
+> Follow these notes in Coq at [src/sys_verif/coq/adt_invariants.v](https://github.com/tchajed/sys-verif-fa24-proofs/blob/main/src/sys_verif/coq/adt_invariants.v).
+
+### Learning outcomes
 1. State a model-based specification for an ADT with an invariant
 2. Compare equational specifications to model-based specifications
 |*)

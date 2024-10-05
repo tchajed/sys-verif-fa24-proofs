@@ -4,6 +4,8 @@ From stdpp Require Import numbers fin_sets gmap.
 
 (*| # Lecture 4: Model-based specifications for functional programs
 
+> Follow these notes in Coq at [src/sys_verif/coq/adt_specs.v](https://github.com/tchajed/sys-verif-fa24-proofs/blob/main/src/sys_verif/coq/adt_specs.v).
+
 ## Learning outcomes
 
 By the end of this lecture, you should be able to
