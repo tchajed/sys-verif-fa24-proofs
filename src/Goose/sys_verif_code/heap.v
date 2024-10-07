@@ -13,6 +13,24 @@ Definition Swap: val :=
     "x" <-[uint64T] "old_y";;
     #().
 
+(* IgnoreOneLocF has a specification that shows it does not need ownership of
+   its second argument. *)
+Definition IgnoreOneLocF: val :=
+  rec: "IgnoreOneLocF" "x" "y" :=
+    control.impl.Assert ((![uint64T] "x") = #0);;
+    "x" <-[uint64T] #42;;
+    #().
+
+(* UseIgnoreOneLocOwnership uses IgnoreOneLocF and can be verified using its
+   specification. *)
+Definition UseIgnoreOneLocOwnership: val :=
+  rec: "UseIgnoreOneLocOwnership" <> :=
+    let: "x" := ref_to uint64T #0 in
+    let: "y" := ref_to uint64T #42 in
+    IgnoreOneLocF "x" "y";;
+    control.impl.Assert ((![uint64T] "x") = (![uint64T] "y"));;
+    #().
+
 (* linked_list.go *)
 
 Definition Node := struct.decl [

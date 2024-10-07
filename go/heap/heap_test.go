@@ -6,6 +6,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestUseIgnoreOneLocOwnership(t *testing.T) {
+	UseIgnoreOneLocOwnership()
+}
+
 func TestInsert(t *testing.T) {
 	assert := assert.New(t)
 

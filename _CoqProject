@@ -37,3 +37,6 @@
 # silence some extraction warnings
 -arg -require -arg "Coq.extraction.Extraction"
 -arg -set -arg "'Extraction Output Directory=src/software_foundations/'"
+
+# Undo is used in examples
+-arg -w -arg -undo-batch-mode
