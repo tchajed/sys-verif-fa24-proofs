@@ -1,5 +1,7 @@
 package functional
 
+import "github.com/goose-lang/std"
+
 // Add returns the sum of a and b
 func Add(a uint64, b uint64) uint64 {
 	return a + b
@@ -47,7 +49,7 @@ func SumN(n uint64) uint64 {
 		if i > n {
 			break
 		}
-		sum += i
+		sum = std.SumAssumeNoOverflow(sum, i)
 		i++
 	}
 	return sum

@@ -8,7 +8,7 @@ By the end of this lecture, you should be able to:
 
 1. Map from Go to its Goose translation, and back.
 2. Explain what is trusted in a proof using Goose.
-3. Read proof goals involving Goose pointers and structs.
+3. Struggle to come up with loop invariants.
 
 ---
 
@@ -171,16 +171,48 @@ Next, do you believe this is a correct model of `for` loops?
 
 :::
 
+### Loop invariants
+
+The general idea for proving the correctness of a loop is to invent a _loop invariant_, an assertion that is (1) true when the loop starts, and (2) _if_ the loop invariant holds at the start of the loop, it should hold at the end. If you prove these two things, via induction, you've proven that the loop invariant is true at the end of the loop. We also can learn one more fact which is necessary in practice: the loop probably has some "break condition", a property that is true when it terminates. We know the break condition is false at the beginning of the loop, and we know it is true at the end.
+
+Here's the principle of loop invariants stated formally, for the `for` loop model above. This is a theorem in Perennial (slightly simplified).
+
+```coq
+Lemma wp_forBreak (I: bool -> iProp Σ) (body: val) :
+  {{{ I true }}}
+    body #()
+  {{{ r, RET #r; I r }}} -∗
+  {{{ I true }}}
+    (for: (λ: <>, #true)%V ; (λ: <>, Skip)%V :=
+       body)
+  {{{ RET #(); I false }}}.
+```
+
+The invariant `I` takes a boolean which is true if the loop is continuing and
+becomes false when it stops iterating.
+
+Note that loop invariants are a _derived principle_. The proof of the theorem above is based only on recursion (since that's how `For` is implemented), and in fact Perennial has some other loop invariant-like rules for special cases of `for` loops, like the common case of `for i := 0; i < n; i++ { ... }`.
+
 |*)
 
 (*| ### Proofs with Goose
 |*)
 
 From sys_verif.program_proof Require Import prelude empty_ffi.
+From Perennial.program_proof Require Import std_proof.
 From Goose.sys_verif_code Require heap functional.
+
+#[local] Ltac Zify.zify_post_hook ::= Z.div_mod_to_equations.
 
 Section goose.
 Context `{hG: !heapGS Σ}.
+
+(*| Code being verified:
+```go
+func Add(a uint64, b uint64) uint64 {
+	return a + b
+}
+``` |*)
 
 Lemma wp_Add (n m: w64) :
   {{{ ⌜uint.Z n + uint.Z m < 2^64⌝ }}}
@@ -195,6 +227,13 @@ Proof.
   word.
 Qed.
 
+(*| Code being verified:
+```go
+func StackEscape() *uint64 {
+	var x = uint64(42)
+	return &x
+}
+``` |*)
 Lemma wp_StackEscape :
   {{{ True }}}
     heap.StackEscape #()
@@ -208,6 +247,16 @@ Proof.
   iFrame.
 Qed.
 
+(*| Code being verified
+```go
+// SumNrec adds up the numbers from 1 to n, recursively.
+func SumNrec(n uint64) uint64 {
+	if n == 0 {
+		return 0
+	}
+	return n + SumNrec(n-1)
+}
+``` |*)
 Lemma wp_SumNrec (n: w64) :
   {{{ ⌜uint.Z n * (uint.Z n + 1) / 2 < 2^64⌝ }}}
     functional.SumNrec #n
@@ -236,7 +285,13 @@ Proof.
     + rewrite Hm. word.
 Qed.
 
-Lemma wp_SumN (n: w64) :
+(*| The proof below has a minimal loop invariant that shows that the heap loads and stores work, but nothing about the values of the `sum` and `i` variables.
+
+**Exercise:** what loop invariant does this code maintain? What is specifically true at exit?
+
+|*)
+
+Lemma wp_SumN_failed (n: w64) :
   {{{ True }}}
     functional.SumN #n
   {{{ (m: w64), RET #m; ⌜uint.Z m = uint.Z n * (uint.Z n + 1) / 2⌝ }}}.
@@ -259,7 +314,10 @@ Proof.
     + iModIntro.
       iApply "HΦ".
       iFrame.
-    + wp_load. wp_load. wp_store. wp_load. wp_store.
+    + wp_load. wp_load.
+      wp_apply wp_SumAssumeNoOverflow.
+      iIntros (Hoverflow).
+      wp_store. wp_load. wp_store.
       iModIntro.
       iApply "HΦ".
       iFrame.
@@ -271,43 +329,88 @@ Proof.
     (* oops, didn't prove anything about sum *)
 Abort.
 
+(*| ::: details Solution
+
+Here is a proof with the right loop invariant.
+
+|*)
+
+Lemma wp_SumN (n: w64) :
+  {{{ ⌜uint.Z n < 2^64-1⌝ }}}
+    functional.SumN #n
+  {{{ (m: w64), RET #m; ⌜uint.Z m = uint.Z n * (uint.Z n + 1) / 2⌝ }}}.
+Proof.
+  wp_start as "%Hn_bound".
+  wp_alloc sum_l as "sum".
+  wp_alloc i_l as "i".
+  wp_pures.
+  wp_apply (wp_forBreak
+              (λ continue,
+                ∃ (sum i: w64),
+                  "sum" :: sum_l ↦[uint64T] #sum ∗
+                  "i" :: i_l ↦[uint64T] #i ∗
+                  "%i_bound" :: ⌜uint.Z i ≤ uint.Z n + 1⌝ ∗
+                  "%Hsum_ok" :: ⌜uint.Z sum = (uint.Z i-1) * (uint.Z i) / 2⌝ ∗
+              "%Hcontinue" :: ⌜continue = false → uint.Z i = (uint.Z n + 1)%Z⌝)%I
+             with "[] [sum i]").
+  - clear Φ.
+    wp_start as "IH".
+    iNamed "IH".
+    wp_load.
+    wp_pures. wp_if_destruct.
+    + iModIntro.
+      iApply "HΦ".
+      iFrame.
+      iPureIntro.
+      split_and!.
+      * word.
+      * word.
+      * intros. word.
+    + wp_load. wp_load.
+      wp_apply wp_SumAssumeNoOverflow.
+      iIntros (Hoverflow).
+      wp_store. wp_load. wp_store.
+      iModIntro.
+      iApply "HΦ".
+      iFrame.
+      iPureIntro.
+      split_and!.
+      * word.
+      * word.
+      * word.
+  - iFrame.
+    iPureIntro.
+    split; word.
+  - iIntros "IH". iNamed "IH".
+    wp_load.
+    iModIntro.
+    iApply "HΦ".
+    iPureIntro.
+    rewrite Hsum_ok.
+    word.
+Qed.
+
+(*| ::: |*)
+
 End goose.
 
 (*| 
 ## Implementation
 
-How the translator uses Go tooling. What Go exposes for type checking.
+Translation uses `go/ast` and `go/types` for parsing, type checking, and resolving references (e.g., which function is being called?). Using official tooling reduces chance of bugs.
+
+Testing at several levels:
+- "Golden" outputs help check if translation changes (e.g., if adding a feature, that unrelated inputs aren't affected).
+- "Semantics" tests run the same code in Go and GooseLang, using an interpreter for GooseLang.
+- Tests of the user interface - package loading, for example.
+- Continuously check that the code we're verifying matches what Goose is outputting, to avoid using stale translations.
+
+The semantics tests - a form of _differential testing_ - is one of the most valuable parts of this process.
 
 ## What does a proof mean?
 
 Translation is implicitly giving a semantics to Go. Correctness relies on this program being modeled "correctly": modeled behavior should be a subset of Go compiler behavior.
 
 If translation does not work, sound (can't prove something wrong) but not a good developer experience. Failure modes: does not translate, does not compile in Coq, compiles but GooseLang code is always undefined.
-
----
-
-::: info
-
-From here onward is probably the next lecture
-
-:::
-
-Theme for today: ownership in Go
-
-## Structs
-
-How to model structs, then how to reason about them. Need for some "types".
-
-Difference between _shallow_ and _deep_ embedding.
-
-## Slices and map
-
-Modeling length, capacity, and contiguous allocations. Ownership in slices, slice append.
-
-Maps as non-atomic values.
-
-## Fractional permissions
-
-"Fictional separation" models read-only access.
 
 |*)
