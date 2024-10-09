@@ -23,3 +23,18 @@ func UseIgnoreOneLocOwnership() {
 	IgnoreOneLocF(&x, &y)
 	primitive.Assert(x == y)
 }
+
+// CopySlice copies from src to dst
+//
+// dst must be at least as long as src
+func CopySlice(dst []byte, src []byte) {
+	l := uint64(len(dst))
+	for i := uint64(0); i < l; i++ {
+		dst[i] = src[i]
+	}
+}
+
+func StackEscape() *uint64 {
+	var x = uint64(42)
+	return &x
+}

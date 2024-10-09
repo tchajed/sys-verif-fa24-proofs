@@ -31,6 +31,23 @@ Definition UseIgnoreOneLocOwnership: val :=
     control.impl.Assert ((![uint64T] "x") = (![uint64T] "y"));;
     #().
 
+(* CopySlice copies from src to dst
+
+   dst must be at least as long as src *)
+Definition CopySlice: val :=
+  rec: "CopySlice" "dst" "src" :=
+    let: "l" := slice.len "dst" in
+    let: "i" := ref_to uint64T #0 in
+    (for: (λ: <>, (![uint64T] "i") < "l"); (λ: <>, "i" <-[uint64T] ((![uint64T] "i") + #1)) := λ: <>,
+      SliceSet byteT "dst" (![uint64T] "i") (SliceGet byteT "src" (![uint64T] "i"));;
+      Continue);;
+    #().
+
+Definition StackEscape: val :=
+  rec: "StackEscape" <> :=
+    let: "x" := ref_to uint64T #42 in
+    "x".
+
 (* linked_list.go *)
 
 Definition Node := struct.decl [

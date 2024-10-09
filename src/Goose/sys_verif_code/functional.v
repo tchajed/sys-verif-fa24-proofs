@@ -16,6 +16,46 @@ Definition Max: val :=
     then "a"
     else "b").
 
+Definition Midpoint: val :=
+  rec: "Midpoint" "x" "y" :=
+    ("x" + "y") `quot` #2.
+
+(* Midpoint2 calculates the midpoint in an overflow-proof way *)
+Definition Midpoint2: val :=
+  rec: "Midpoint2" "x" "y" :=
+    "x" + (("y" - "x") `quot` #2).
+
+Definition Arith: val :=
+  rec: "Arith" "a" "b" :=
+    let: "sum" := "a" + "b" in
+    (if: "sum" = #7
+    then "a"
+    else
+      let: "mid" := Midpoint "a" "b" in
+      "mid").
+
+(* SumNrec adds up the numbers from 1 to n, recursively. *)
+Definition SumNrec: val :=
+  rec: "SumNrec" "n" :=
+    (if: "n" = #0
+    then #0
+    else "n" + ("SumNrec" ("n" - #1))).
+
+(* SumN adds up the numbers from 1 to n, with a loop. *)
+Definition SumN: val :=
+  rec: "SumN" "n" :=
+    let: "sum" := ref_to uint64T #0 in
+    let: "i" := ref_to uint64T #1 in
+    Skip;;
+    (for: (λ: <>, #true); (λ: <>, Skip) := λ: <>,
+      (if: (![uint64T] "i") > "n"
+      then Break
+      else
+        "sum" <-[uint64T] ((![uint64T] "sum") + (![uint64T] "i"));;
+        "i" <-[uint64T] ((![uint64T] "i") + #1);;
+        Continue));;
+    ![uint64T] "sum".
+
 (* Fibonacci returns the nth Fibonacci number *)
 Definition Fibonacci: val :=
   rec: "Fibonacci" "n" :=

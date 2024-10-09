@@ -13,6 +13,46 @@ func Max(a uint64, b uint64) uint64 {
 	return b
 }
 
+func Midpoint(x, y uint64) uint64 {
+	return (x + y) / 2
+}
+
+// Midpoint2 calculates the midpoint in an overflow-proof way
+func Midpoint2(x, y uint64) uint64 {
+	return x + (y-x)/2
+}
+
+func Arith(a, b uint64) uint64 {
+	sum := a + b
+	if sum == 7 {
+		return a
+	}
+	mid := Midpoint(a, b)
+	return mid
+}
+
+// SumNrec adds up the numbers from 1 to n, recursively.
+func SumNrec(n uint64) uint64 {
+	if n == 0 {
+		return 0
+	}
+	return n + SumNrec(n-1)
+}
+
+// SumN adds up the numbers from 1 to n, with a loop.
+func SumN(n uint64) uint64 {
+	var sum = uint64(0)
+	var i = uint64(1)
+	for {
+		if i > n {
+			break
+		}
+		sum += i
+		i++
+	}
+	return sum
+}
+
 // Fibonacci returns the nth Fibonacci number
 func Fibonacci(n uint64) uint64 {
 	if n == 0 {
