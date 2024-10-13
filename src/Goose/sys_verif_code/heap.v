@@ -220,4 +220,64 @@ Definition SearchTree__Contains: val :=
         then "SearchTree__Contains" (struct.loadF SearchTree "left" "t") "key"
         else "SearchTree__Contains" (struct.loadF SearchTree "right" "t") "key"))).
 
+(* struct.go *)
+
+Definition Person := struct.decl [
+  "FirstName" :: stringT;
+  "LastName" :: stringT;
+  "Age" :: uint64T
+].
+
+Definition Person__Name: val :=
+  rec: "Person__Name" "p" :=
+    ((struct.get Person "FirstName" "p") + #(str" ")) + (struct.get Person "LastName" "p").
+
+Definition Person__Older: val :=
+  rec: "Person__Older" "p" "delta" :=
+    struct.storeF Person "Age" "p" ((struct.loadF Person "Age" "p") + "delta");;
+    #().
+
+Definition Person__GetAge: val :=
+  rec: "Person__GetAge" "p" :=
+    struct.fieldRef Person "Age" "p".
+
+Definition ExamplePerson: val :=
+  rec: "ExamplePerson" <> :=
+    struct.mk Person [
+      "FirstName" ::= #(str"Ada");
+      "LastName" ::= #(str"Lovelace");
+      "Age" ::= #25
+    ].
+
+Definition ExamplePersonRef: val :=
+  rec: "ExamplePersonRef" <> :=
+    struct.new Person [
+      "FirstName" ::= #(str"Ada");
+      "LastName" ::= #(str"Lovelace");
+      "Age" ::= #25
+    ].
+
+Definition Person__BuggySetAge: val :=
+  rec: "Person__BuggySetAge" "p" :=
+    struct.storeF Person "Age" "p" ((struct.get Person "Age" "p") + #1);;
+    #().
+
+Definition Rect := struct.decl [
+  "Width" :: uint64T;
+  "Height" :: uint64T
+].
+
+Definition Rect__Area: val :=
+  rec: "Rect__Area" "r" :=
+    (struct.get Rect "Width" "r") * (struct.get Rect "Height" "r").
+
+Definition Rect__IsSquare: val :=
+  rec: "Rect__IsSquare" "r" :=
+    (struct.get Rect "Width" "r") = (struct.get Rect "Height" "r").
+
+Definition Rect__MakeSquare: val :=
+  rec: "Rect__MakeSquare" "r" :=
+    struct.storeF Rect "Height" "r" (struct.loadF Rect "Width" "r");;
+    #().
+
 End code.

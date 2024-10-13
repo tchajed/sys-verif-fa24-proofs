@@ -36,3 +36,18 @@ func TestInsert(t *testing.T) {
 	assert.False(tree.Contains(1), "Tree should not contain key 1")
 	assert.False(tree.Contains(9), "Tree should not contain key 9")
 }
+
+func TestPersonOps(t *testing.T) {
+	var p = Person{
+		FirstName: "Ada",
+		LastName:  "Lovelace",
+		Age:       25,
+	}
+
+	assert.Equal(t, p.Name(), "Ada Lovelace")
+	*p.GetAge() = 36
+	assert.Equal(t, p.Age, uint64(36))
+
+	p.BuggySetAge()
+	assert.Equal(t, p.Age, uint64(36))
+}

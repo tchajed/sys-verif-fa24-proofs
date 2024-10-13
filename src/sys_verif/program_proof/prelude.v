@@ -17,9 +17,7 @@ don't parse), so they include a Unicode zero-width space after the => *)
 Notation "|={ E }=>​ Q" := (ncfupd E E Q) (only printing, at level 200, E at level 50) : bi_scope.
 Notation "|==>​ Q" := (ncfupd ⊤ ⊤ Q) (only printing, at level 200) : bi_scope.
 
-Tactic Notation "wp_start" :=
-  iIntros (Φ) "Hpre HΦ";
-  try wp_rec.
+Coercion LitString : string >-> base_lit.
 
 Tactic Notation "wp_start" "as" constr(pat) :=
   (* When proving a loop body, the obligation is expressed using a Hoare triple
@@ -30,9 +28,16 @@ Tactic Notation "wp_start" "as" constr(pat) :=
     we haven't bothered with error messaging here.
    *)
   try (iModIntro (□ _)%I);
+  (* A loop obligation might involve a new Φ but the old variable is still in
+  scope. The usual pattern in our proofs is to clear the old one. *)
+  let x := ident:(Φ) in
+  try clear x;
   iIntros (Φ) "Hpre HΦ";
   iDestruct "Hpre" as pat;
   try wp_rec.
+
+Tactic Notation "wp_start" :=
+  wp_start as "Hpre".
 
 Tactic Notation "wp_alloc" ident(l) "as" constr(H) :=
   first [ wp_apply wp_ref_to;
