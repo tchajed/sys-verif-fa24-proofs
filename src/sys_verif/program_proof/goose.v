@@ -148,7 +148,7 @@ Definition SumN: val :=
     ![uint64T] "sum".
 ```
 
-The (GooseLang) syntax `for:` is a very thin Notation around the following _model_ of (Go) `for` loops (the order of arguments differs though):
+The (GooseLang) syntax `for:` is a very thin Notation around the following _model_ of (Go) `for` loops:
 
 ```coq
 Definition For: val :=
@@ -163,23 +163,23 @@ Definition For: val :=
      else #()) #().
 ```
 
-The Go code `for e1; e2; e3 { body }` is translated (roughly) into `e1;; For e2 body e3`.
+The Go code `for init; cond; post { body }` is translated (roughly) into `init;; For cond body post`. (Unfortunately this isn't the order of arguments of the notation, which goes `for: cond ; post := body`. The function `For` should be fixed.)
 
-`For` takes three _functions_ as arguments: cond, body, and post. You can think of it as having the type `For : (unit -> bool) -> (unit -> unit) -> (unit -> unit) -> unit`, where `#() : unit` is the unit value in GooseLang. (You are welcome to think about these types but we don't actually have a type system for GooseLang, so it's only in your imagination.)
+`For` takes three _functions_ as arguments (making it a so-called _higher-order function_): cond, body, and post. You can think of it as having the type `For : (unit -> bool) -> (unit -> unit) -> (unit -> unit) -> unit`, where `#() : unit` is the unit value in GooseLang. (You are welcome to think about these types but we don't actually have a type system for GooseLang, so it's only in your imagination.)
 
 You might be confused by the `unit` argument each function takes: this is sometimes called a _thunk_ and is needed to prevent evaluating the condition, body, and post until they are needed in the loop. For example, if for the `cond` we passed a `bool` rather than a `unit -> bool` it would be a constant throughout the entire loop. A function that takes a unit isn't evaluated until desired by passing the argument.
 
 ::: info Exercise
 
-Check your understanding: does the `cond` return `true` when the loop should stop or keep going? Try to figure out how this follows from the definition of `Fo`, not just your expectations.
+Check your understanding: does the `cond` return `true` when the loop should stop or keep going? Try to figure out how this follows from the definition of `For`, not just your expectations.
 
 Next, do you believe this is a correct model of `for` loops?
 
 :::
 
-### Loop invariants
+## Loop invariants
 
-The general idea for proving the correctness of a loop is to invent a _loop invariant_, an assertion that is (1) true when the loop starts, and (2) _if_ the loop invariant holds at the start of the loop, it should hold at the end. If you prove these two things, via induction, you've proven that the loop invariant is true at the end of the loop. We also can learn one more fact which is necessary in practice: the loop probably has some "break condition", a property that is true when it terminates. We know the break condition is false at the beginning of the loop, and we know it is true at the end.
+The general idea for proving the correctness of a loop is to invent a _loop invariant_, an assertion that is (1) true when the loop starts, and (2) _if_ the loop invariant holds at the start of the loop, it should hold at the end. If you prove these two things, via induction, you've proven that the loop invariant is true at the end of the loop. We also can learn one more fact which is necessary in practice: the loop probably has a "break condition", a property that is true when it terminates. We know the loop invariant is preserved by each iteration, and if the loop exits it satisfies the break condition.
 
 Here's the principle of loop invariants stated formally, for the `for` loop model above. This is a theorem in Perennial (slightly simplified).
 
@@ -194,14 +194,23 @@ Lemma wp_forBreak (I: bool -> iProp Σ) (body: val) :
   {{{ RET #(); I false }}}.
 ```
 
-The invariant `I` takes a boolean which is true if the loop is continuing and
-becomes false when it stops iterating.
+The invariant `I` takes a boolean which is true if the loop is continuing and becomes false when it stops iterating.
 
 Note that loop invariants are a _derived principle_. The proof of the theorem above is based only on recursion (since that's how `For` is implemented), and in fact Perennial has some other loop invariant-like rules for special cases of `for` loops, like the common case of `for i := 0; i < n; i++ { ... }`.
 
+### Exercise (difficult, especially useful)
+
+The informal description above describes a "continue condition" and "break condition", but that is not how `wp_forBreak` is written. In this exercise you'll bridge the gap.
+
+1. Reformulate `wp_forBreak` so that it takes a regular loop invariant and a break condition as separate arguments, to more closely match the principle above. That, state a different theorem (let's call it `wp_for_breakCondition`) for proving a specification about that same expression `(for: (λ: <>, #true)%V ; (λ: <>, Skip)%V := body)`.
+2. Prove your new `wp_for_breakCondition` using `wp_forBreak`. You should replace the `-∗` in the theorem statement with a `→` (we will discuss what difference this creates later when we talk about something called the _persistently modality_).
+
 |*)
 
-(*| ### Proofs with Goose
+(*| ## Proofs with Goose
+
+This section shows some examples of specifications and proofs.
+
 |*)
 
 From sys_verif.program_proof Require Import prelude empty_ffi.
@@ -406,12 +415,145 @@ Qed.
 
 (*| ::: |*)
 
+(*| ### Case study: Binary search
+
+Here is a larger example with a provided loop invariant but not the correctness proof. The code being verified is the following (inspired by <https://go.dev/src/sort/search.go>):
+
+```go
+// BinarySearch looks for needle in the sorted list s. It returns (index, found)
+// where if found = false, needle is not present in s, and if found = true, s[index]
+// == needle.
+//
+// If needle appears multiple times in s, no guarantees are made about which of
+// those indices is returned.
+func BinarySearch(s []uint64, needle uint64) (uint64, bool) {
+	var i = uint64(0)
+	var j = uint64(len(s))
+	for i < j {
+		mid := i + (j-i)/2
+		if s[mid] < needle {
+			i = mid + 1
+		} else {
+			j = mid
+		}
+	}
+	if i < uint64(len(s)) {
+		return i, s[i] == needle
+	}
+	return i, false
+}
+```
+
+The source for this example suggests the following invariant. To relate the more general code for `Find` to `BinarySearch`, use the following relationships:
+
+- `h` in the original is `mid` in `BinarySearch`
+- `cmp(mid)` is what we would write `needle - s[mid]`, so that `cmp(mid) > 0` is `s[mid] < needle`.
+
+The suggested invariant is the following:
+
+> Define cmp(-1) > 0 and cmp(n) <= 0.
+>
+> Invariant: cmp(i-1) > 0, cmp(j) <= 0
+
+|*)
+
+Definition is_sorted (xs: list w64) :=
+  ∀ (i j: nat), (i < j)%nat →
+         ∀ (x1 x2: w64), xs !! i = Some x1 →
+                  xs !! j = Some x2 →
+                  uint.Z x1 < uint.Z x2.
+
+Lemma wp_BinarySearch (s: Slice.t) (xs: list w64) (needle: w64) :
+  {{{ own_slice_small s uint64T (DfracOwn 1) xs ∗ ⌜is_sorted xs⌝ }}}
+    heap.BinarySearch s #needle
+  {{{ (i: w64) (ok: bool), RET (#i, #ok);
+      own_slice_small s uint64T (DfracOwn 1) xs ∗
+      ⌜ok = true → xs !! uint.nat i = Some needle⌝
+  }}}.
+Proof.
+  wp_start as "[Hs %Hsorted]".
+  wp_pures.
+  wp_alloc i_l as "i".
+  iDestruct (own_slice_small_sz with "Hs") as %Hsz.
+  wp_apply (wp_slice_len).
+  wp_alloc j_l as "j".
+  wp_pures.
+  wp_apply (wp_forBreak_cond
+           (λ continue, ∃ (i j: w64),
+               "Hs" :: own_slice_small s uint64T (DfracOwn 1) xs ∗
+               "i" :: i_l ↦[uint64T] #i ∗
+               "j" :: j_l ↦[uint64T] #j ∗
+               "%Hij" :: ⌜uint.Z i ≤ uint.Z j ≤ Z.of_nat (length xs)⌝ ∗
+               "%H_low" :: ⌜∀ (i': nat),
+                            i' < uint.nat i →
+                            ∀ (x: w64), xs !! i' = Some x →
+                                uint.Z x < uint.Z needle⌝ ∗
+               "%H_hi" :: ⌜∀ (j': nat),
+                            uint.nat j ≤ j' →
+                            ∀ (y: w64), xs !! j' = Some y →
+                                uint.Z needle < uint.Z y⌝ ∗
+               "%Hbreak" ∷ ⌜continue = false → i = j⌝
+           )%I
+           with "[] [Hs i j]").
+  - wp_start as "IH".
+    iNamed "IH".
+    wp_load. wp_load.
+    wp_pures.
+    wp_if_destruct.
+    + wp_pures.
+      wp_load. wp_load. wp_load. wp_pures.
+      set (mid := word.add i (word.divu (word.sub j i) (W64 2)) : w64).
+      assert (uint.Z mid = (uint.Z i + uint.Z j) / 2) as Hmid_ok.
+      { subst mid.
+        word. }
+      list_elem xs (uint.nat mid) as x_mid.
+      wp_apply (wp_SliceGet with "[$Hs]").
+      { eauto. }
+      iIntros "Hs".
+      simpl to_val.
+      wp_pures.
+      wp_if_destruct.
+      * wp_store.
+        iModIntro.
+        iApply "HΦ".
+        iFrame.
+        iPureIntro.
+        split_and!; try word.
+        { intros.
+          (* the [revert H] is a bit of black magic here; it [word] operate on H
+          by putting it into the goal *)
+          assert (i' ≤ uint.nat mid)%nat by (revert H; word).
+          admit.
+        }
+        (* You might ask, why is this super easy? A: we didn't change any relevant variables *)
+        eauto.
+      * wp_store.
+        iModIntro.
+        iApply "HΦ".
+        iFrame.
+        iPureIntro.
+        split_and!; try word.
+        { auto. }
+        admit. (* TODO: fill in based on earlier proof *)
+    + iModIntro.
+      iApply "HΦ".
+      iFrame.
+      iPureIntro.
+      split_and!; try word; auto.
+      intros.
+      word.
+  - iFrame.
+    admit.
+  - iIntros "Hpost".
+    admit.
+Admitted.
+
 End goose.
 
 (*| 
 ## Implementation
 
-The Goose translation uses [go/ast](https://pkg.go.dev/go/ast) and [go/types](https://pkg.go.dev/go/types) for parsing, type checking, and resolving references (e.g., which function is being called?). Using these official packages reduces chance of bugs, and allows us to rely on types; writing a type inference engine for Go from scratch would be a daunting task otherwise.
+The Goose translation uses [go/ast](https://pkg.go.dev/go/ast) and [go/types](https://pkg.go.dev/go/types) for parsing, type checking, and resolving references (e.g., which function is being called?). Using these official packages reduces chance of bugs, and allows us to rely on types; writing a type inference engine for Go from scratch would be a daunting task, and would be much less trustworthy than the official package. (This package is not literally the one used by the `go` binary, but it is very close. You can read more about the situation by looking at the [`internal/types2`](https://cs.opensource.google/go/go/+/master:src/cmd/compile/internal/types2/README.md) documentation. If you're confused about something in Go, there's a higher than usual chance you can find the answer in the source code.)
 
 Goose is tested at several levels:
 
@@ -435,5 +577,7 @@ $$\mathrm{behavior}(p) \subseteq \mathrm{semantics}(\mathrm{goose}(p))$$
 The reason this is the direction of the inequality is that the proofs will show that every execution in $\mathrm{semantics}(\mathrm{goose}(p))$ satisfy some specification, and in that case this inclusion guarantees that all the real executable behaviors are also "good", even if the semantics has some extra behaviors. On the other hand it would not be ok to verify a _subset_ of the behaviors of a program since one of the excluded behaviors could be exactly the kind of bug you wanted to avoid.
 
 If translation does not work, sound (can't prove something wrong) but not a good developer experience. Failure modes: does not translate, does not compile in Coq, compiles but GooseLang code is always undefined.
+
+This correctness criteria for Goose makes it easier to understand why the implementation would want the official typechecker and not some other version: whatever the meaning of a Go program, we want the Goose understanding to match the Go compiler's understanding. If they both don't match the reference manual, or if the reference manual is ambiguous, that doesn't affect Goose's correctness.
 
 |*)

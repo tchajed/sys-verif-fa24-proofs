@@ -4,6 +4,32 @@ From Perennial.goose_lang Require Import prelude.
 Section code.
 Context `{ext_ty: ext_types}.
 
+(* binary_search.go *)
+
+(* BinarySearch looks for needle in the sorted list s. It returns (index, ok)
+   where if ok is false, needle is not present in s, and if ok is true, s[index]
+   == needle.
+
+   If needle appears multiple times in s, no guarantees are made about which of
+   those indices is returned. *)
+Definition BinarySearch: val :=
+  rec: "BinarySearch" "s" "needle" :=
+    let: "i" := ref_to uint64T #0 in
+    let: "j" := ref_to uint64T (slice.len "s") in
+    Skip;;
+    (for: (λ: <>, (![uint64T] "i") < (![uint64T] "j")); (λ: <>, Skip) := λ: <>,
+      let: "mid" := (![uint64T] "i") + (((![uint64T] "j") - (![uint64T] "i")) `quot` #2) in
+      (if: (SliceGet uint64T "s" "mid") < "needle"
+      then
+        "i" <-[uint64T] ("mid" + #1);;
+        Continue
+      else
+        "j" <-[uint64T] "mid";;
+        Continue));;
+    (if: (![uint64T] "i") < (slice.len "s")
+    then (![uint64T] "i", (SliceGet uint64T "s" (![uint64T] "i")) = "needle")
+    else (![uint64T] "i", #false)).
+
 (* heap.go *)
 
 Definition Swap: val :=
