@@ -6,8 +6,8 @@ Context `{ext_ty: ext_types}.
 
 (* binary_search.go *)
 
-(* BinarySearch looks for needle in the sorted list s. It returns (index, ok)
-   where if ok is false, needle is not present in s, and if ok is true, s[index]
+(* BinarySearch looks for needle in the sorted list s. It returns (index, found)
+   where if found = false, needle is not present in s, and if found = true, s[index]
    == needle.
 
    If needle appears multiple times in s, no guarantees are made about which of
