@@ -132,6 +132,43 @@ Definition Node__Append: val :=
         "next" ::= "Node__Append" (struct.loadF Node "next" "l") "other"
       ]).
 
+(* majority_vote.go *)
+
+(* FindMajority finds an `x` that appears in the slice `a` more than half the
+   time.
+
+   That is, if there is some x that appears in a strictly more than `len(a)/2`
+   times, then `FindMajority` will return it.
+
+   This implementation of the algorithm comes from _Program Proofs_ by K. Rustan
+   M. Leino in chapter 13.7. *)
+Definition FindMajority (T:ty): val :=
+  rec: "FindMajority" "a" :=
+    let: "k" := ref_to T (SliceGet T "a" #0) in
+    let: "lo" := ref_to uint64T #0 in
+    let: "hi" := ref_to uint64T #1 in
+    let: "c" := ref_to uint64T #1 in
+    let: "l" := slice.len "a" in
+    Skip;;
+    (for: (λ: <>, (![uint64T] "hi") < "l"); (λ: <>, Skip) := λ: <>,
+      (if: (SliceGet T "a" (![uint64T] "hi")) = (![T] "k")
+      then
+        "hi" <-[uint64T] ((![uint64T] "hi") + #1);;
+        "c" <-[uint64T] ((![uint64T] "c") + #1)
+      else
+        (if: (((![uint64T] "hi") + #1) - (![uint64T] "lo")) < (#2 * (![uint64T] "c"))
+        then "hi" <-[uint64T] ((![uint64T] "hi") + #1)
+        else "hi" <-[uint64T] ((![uint64T] "hi") + #1)));;
+      (if: (![uint64T] "hi") = "l"
+      then Break
+      else
+        "k" <-[T] (SliceGet T "a" (![uint64T] "hi"));;
+        "lo" <-[uint64T] (![uint64T] "hi");;
+        "hi" <-[uint64T] ((![uint64T] "hi") + #1);;
+        "c" <-[uint64T] #1;;
+        Continue));;
+    ![T] "k".
+
 (* queue.go *)
 
 Definition Stack := struct.decl [
