@@ -30,6 +30,71 @@ Definition BinarySearch: val :=
     then (![uint64T] "i", (SliceGet uint64T "s" (![uint64T] "i")) = "needle")
     else (![uint64T] "i", #false)).
 
+(* exercises.go *)
+
+Definition ExampleA: val :=
+  rec: "ExampleA" "x" "y" "z" :=
+    (if: ![boolT] "x"
+    then
+      "y" <-[uint64T] "z";;
+      #()
+    else
+      "y" <-[uint64T] #0;;
+      #()).
+
+Definition ExampleB: val :=
+  rec: "ExampleB" "x" "y" "z" :=
+    (if: ![boolT] "x"
+    then
+      control.impl.Assert ("z" = #0);;
+      "y" <-[uint64T] "z";;
+      #()
+    else
+      "y" <-[uint64T] #0;;
+      #()).
+
+Definition S1 := struct.decl [
+  "a" :: uint64T;
+  "b" :: slice.T byteT
+].
+
+Definition ExampleC: val :=
+  rec: "ExampleC" "x" :=
+    #(str"unimplemented").
+
+Definition ExampleD: val :=
+  rec: "ExampleD" "x" :=
+    (if: (struct.loadF S1 "a" "x") = #0
+    then #(str"false")
+    else #(str"true")).
+
+Definition ExampleE: val :=
+  rec: "ExampleE" "x" :=
+    control.impl.Assert ((struct.loadF S1 "a" "x") = (slice.len (struct.loadF S1 "b" "x")));;
+    SliceGet byteT (struct.loadF S1 "b" "x") #0.
+
+Definition ExampleF: val :=
+  rec: "ExampleF" "x" "y" :=
+    struct.storeF S1 "a" "y" (struct.get S1 "a" "x");;
+    struct.storeF S1 "b" "y" slice.nil;;
+    #().
+
+Definition collatzF: val :=
+  rec: "collatzF" "x" :=
+    (if: ("x" `rem` #2) = #0
+    then "x" `quot` #2
+    else (#3 * "x") + #1).
+
+Definition collatzIter: val :=
+  rec: "collatzIter" "x" "n" :=
+    (if: "n" = #0
+    then "x"
+    else "collatzIter" (collatzF "x") ("n" - #1)).
+
+Definition ExampleG: val :=
+  rec: "ExampleG" <> :=
+    collatzIter #12 #9.
+
 (* heap.go *)
 
 Definition Swap: val :=
