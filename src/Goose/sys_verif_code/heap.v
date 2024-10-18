@@ -93,6 +93,12 @@ Definition Node__Insert: val :=
       "next" ::= "l"
     ].
 
+Definition Node__Pop: val :=
+  rec: "Node__Pop" "l" :=
+    (if: "l" = #null
+    then (#0, "l", #false)
+    else (struct.loadF Node "elem" "l", struct.loadF Node "next" "l", #true)).
+
 Definition Node__Contains: val :=
   rec: "Node__Contains" "l" "elem" :=
     let: "n" := ref_to ptrT "l" in

@@ -16,6 +16,13 @@ func (l *Node) Insert(elem uint64) *Node {
 	return &Node{elem: elem, next: l}
 }
 
+func (l *Node) Pop() (uint64, *Node, bool) {
+	if l == nil {
+		return 0, l, false
+	}
+	return l.elem, l.next, true
+}
+
 func (l *Node) Contains(elem uint64) bool {
 	var n = l
 	var found = false

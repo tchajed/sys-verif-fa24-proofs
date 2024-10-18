@@ -33,7 +33,8 @@ func TestQueue(t *testing.T) {
 	assert.True(ok)
 	assert.Equal(x, uint64(1))
 
-	q.Pop() // 2
+	x, _ = q.Pop() // 2
+	assert.Equal(x, uint64(2))
 	q.Push(4)
 	x, ok = q.Pop()
 	assert.Equal(x, uint64(3))
