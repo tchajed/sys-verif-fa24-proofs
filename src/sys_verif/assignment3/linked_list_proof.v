@@ -1,4 +1,4 @@
-(*| # Linked lists
+(*| # Assignment 3: Linked lists as lists
 
 This proof develops a specification for the linked-list implementation at
 [go/heap/linked_list.go](https://github.com/tchajed/sys-verif-fa24-proofs/blob/main/go/heap/linked_list.go).
