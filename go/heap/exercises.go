@@ -25,22 +25,18 @@ type S1 struct {
 }
 
 func ExampleC(x *S1) string {
-	return "unimplemented"
-}
-
-func ExampleD(x *S1) string {
 	if x.a == 0 {
 		return "false"
 	}
 	return "true"
 }
 
-func ExampleE(x *S1) byte {
+func ExampleD(x *S1) byte {
 	primitive.Assert(x.a == uint64(len(x.b)))
 	return x.b[0]
 }
 
-func ExampleF(x S1, y *S1) {
+func ExampleE(x S1, y *S1) {
 	y.a = x.a
 	y.b = nil
 }

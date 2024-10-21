@@ -60,21 +60,17 @@ Definition S1 := struct.decl [
 
 Definition ExampleC: val :=
   rec: "ExampleC" "x" :=
-    #(str"unimplemented").
-
-Definition ExampleD: val :=
-  rec: "ExampleD" "x" :=
     (if: (struct.loadF S1 "a" "x") = #0
     then #(str"false")
     else #(str"true")).
 
-Definition ExampleE: val :=
-  rec: "ExampleE" "x" :=
+Definition ExampleD: val :=
+  rec: "ExampleD" "x" :=
     control.impl.Assert ((struct.loadF S1 "a" "x") = (slice.len (struct.loadF S1 "b" "x")));;
     SliceGet byteT (struct.loadF S1 "b" "x") #0.
 
-Definition ExampleF: val :=
-  rec: "ExampleF" "x" "y" :=
+Definition ExampleE: val :=
+  rec: "ExampleE" "x" "y" :=
     struct.storeF S1 "a" "y" (struct.get S1 "a" "x");;
     struct.storeF S1 "b" "y" slice.nil;;
     #().
