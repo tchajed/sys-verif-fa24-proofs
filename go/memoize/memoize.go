@@ -28,10 +28,10 @@ type MockMemoize struct {
 	f func(uint64) uint64
 }
 
-func NewMockMemoize(f func(uint64) uint64) MockMemoize {
-	return MockMemoize{f: f}
+func NewMockMemoize(f func(uint64) uint64) *MockMemoize {
+	return &MockMemoize{f: f}
 }
 
-func (m MockMemoize) Call(x uint64) uint64 {
+func (m *MockMemoize) Call(x uint64) uint64 {
 	return m.f(x)
 }

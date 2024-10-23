@@ -34,12 +34,12 @@ Definition MockMemoize := struct.decl [
 
 Definition NewMockMemoize: val :=
   rec: "NewMockMemoize" "f" :=
-    struct.mk MockMemoize [
+    struct.new MockMemoize [
       "f" ::= "f"
     ].
 
 Definition MockMemoize__Call: val :=
   rec: "MockMemoize__Call" "m" "x" :=
-    (struct.get MockMemoize "f" "m") "x".
+    (struct.loadF MockMemoize "f" "m") "x".
 
 End code.
