@@ -1,11 +1,11 @@
-(*| # Lecture 13: The persistently modality
+(*| # Lecture 15: The persistently modality
 
 > Follow these notes in Coq at [src/sys_verif/program_proof/persistently.v](https://github.com/tchajed/sys-verif-fa24-proofs/blob/main/src/sys_verif/program_proof/persistently.v).
 
 ## Learning outcomes
 
-- Read IPM goals with spatial and persistent contexts.
-- Explain the difference between top-level specifications and Hoare triples in separation logic.
+- Appreciate the value of having persistent propositions.
+- Explain the difference between a Hoare triple as a Prop and as an iProp.
 
 ## Motivation
 
@@ -107,7 +107,7 @@ Lemma read_discarded_spec (l: loc) (x: w64) :
   {{{ RET #x; True }}}.
 Proof.
   wp_start as "#H".
-  wp_apply (wp_LoadAt with "H"). iIntros "_".
+  wp_apply (wp_LoadAt with "[$H]"). iIntros "_".
   iApply "HΦ". auto.
 Qed.
 
@@ -179,21 +179,21 @@ There is another difference between the two implementations: we use a `*MockMemo
 
 ---
 
-To give a specification to the memoization library, we will require that the user prove that the provided function, which we'll call `f_body` (of type `val`, since it's a function in GooseLang), implements a Gallina function `f : w64 → w64`. This is more restrictive than strictly necessary, but we do need it to have some Hoare triple, since it must at minimum be safe to call, and if we want to say anything about the result of `Call` we also need to know what it does. The choice here is to require it to implement some pure function over integers, but which is one is arbitrary.
+To give a specification to the memoization library, we will require that the user prove that the provided function, which we'll call `f_code` (of type `val`, since it's a function in GooseLang), implements a Gallina function `f : w64 → w64`. This is more restrictive than strictly necessary, but we do need it to have some Hoare triple, since it must at minimum be safe to call, and if we want to say anything about the result of `Call` we also need to know what it does. The choice here is to require it to implement some pure function over integers, but which is one is arbitrary.
 
-The core of the proof is the representation invariant for a `*MockMemoize`. The most interesting part of that invariant is how we say that `f_body` implements `f: w64 → w64`.
+The core of the proof is the representation invariant for a `*MockMemoize`. The most interesting part of that invariant is how we say that `f_code` implements `f: w64 → w64`.
 
 |*)
 
-Definition fun_implements (f_body: val) (f: w64 → w64) : iProp Σ :=
-  ∀ (x:w64), {{{ True }}} f_body #x {{{ RET #(f x); True }}}.
+Definition fun_implements (f_code: val) (f: w64 → w64) : iProp Σ :=
+  ∀ (x:w64), {{{ True }}} f_code #x {{{ RET #(f x); True }}}.
 
-#[export] Instance fun_implements_persistent f_body f :
-  Persistent (fun_implements f_body f).
+#[export] Instance fun_implements_persistent f_code f :
+  Persistent (fun_implements f_code f).
 Proof. apply _. Qed.
 
 (*| 
-`fun_implements` is different from what you've seen so far in this class because it states the correctness of `f_body` as an `iProp` rather than a `Prop`. This is significant later, when we'll use `fun_implements` inside a precondition.
+`fun_implements` is different from what you've seen so far in this class because it states the correctness of `f_code` as an `iProp` rather than a `Prop`. This is significant later, when we'll use `fun_implements` inside a precondition.
 
 The way this works is that a Hoare triple $\hoare{P}{e}{Q}$ when used as an iProp actually expands to:
 
@@ -209,22 +209,22 @@ Try to puzzle out what it means to prove this persistently vs not. You might wan
 
 (*| There are several interesting things in the representation function `own_mock_memoize` below:
 
-- The `□` in `m ↦[MockMemoize :: "f"]□ f_body` makes this a persistent, read-only field points-to fact.
+- The `□` in `m ↦[MockMemoize :: "f"]□ f_code` makes this a persistent, read-only field points-to fact.
 - The names "#Hf" and "#Hf_spec" have a # which means they will be added to the
   Iris Proof Mode's persistent context when introduced.
 
 |*)
 
 Definition own_mock_memoize (m: loc) (f: w64 → w64) : iProp Σ :=
-   ∃ (f_body: val),
-     "#Hf" :: m ↦[MockMemoize :: "f"]□ f_body ∗
-     "#Hf_spec" :: fun_implements f_body f.
+   ∃ (f_code: val),
+     "#Hf" :: m ↦[MockMemoize :: "f"]□ f_code ∗
+     "#Hf_spec" :: fun_implements f_code f.
 
-Lemma wp_NewMockMemoize (f_body: val) (f: w64 → w64) :
+Lemma wp_NewMockMemoize (f_code: val) (f: w64 → w64) :
   (* NOTE: this val_ty is an unnecessary restriction in Goose *)
-  val_ty f_body (arrowT uint64T uint64T) →
-  {{{ fun_implements f_body f }}}
-    NewMockMemoize f_body
+  val_ty f_code (arrowT uint64T uint64T) →
+  {{{ fun_implements f_code f }}}
+    NewMockMemoize f_code
   {{{ l, RET #l; own_mock_memoize l f }}}.
 Proof.
   intros Hty.
@@ -269,19 +269,19 @@ Now we'll provide the same interface, but with actual memoization.
 |*)
 
 Definition own_memoize (m: val) (f: w64 → w64) : iProp Σ :=
-   ∃ (f_body: val) (m_ref: loc) (results: gmap w64 w64),
+   ∃ (f_code: val) (m_ref: loc) (results: gmap w64 w64),
      (* Notice that the map is modeled as a location. This reflects how Go maps
      work (the value of that pointer does not change as you update the map). *)
-     "%Hmeq" :: ⌜m = (f_body, (#m_ref, #()))%V⌝ ∗
-     "#Hf_spec" :: fun_implements f_body f ∗
+     "%Hmeq" :: ⌜m = (f_code, (#m_ref, #()))%V⌝ ∗
+     "#Hf_spec" :: fun_implements f_code f ∗
      "Hm" :: own_map m_ref (DfracOwn 1) results ∗
      (* This is the invariant that gives the correctness of the
      memoization. *)
      "%Hresults" :: ⌜∀ x y, results !! x = Some y → y = f x⌝.
 
-Lemma wp_NewMemoize (f_body: val) (f: w64 → w64) :
-  {{{ fun_implements f_body f }}}
-    NewMemoize f_body
+Lemma wp_NewMemoize (f: w64 → w64) (f_code: val) :
+  {{{ fun_implements f_code f }}}
+    NewMemoize f_code
   {{{ v, RET v; own_memoize v f }}}.
 Proof.
   wp_start as "#Hf".
@@ -329,6 +329,150 @@ Proof.
     { rewrite lookup_insert in Hget. congruence. }
     rewrite lookup_insert_ne // in Hget.
     eauto.
+Qed.
+
+(*| It helps to see what it looks like to use this specification (what we call a "client" of the specification in general).
+
+The code has two such examples: `UseMemoize1` memoizes a straightforward function, while `UseMemoize2` is a bit more complicated. Both implementations internally use `primitive.Assert`, so we will simply prove the postcondition `True`, which shows those assertions succeed and nothing else.
+
+|*)
+
+Lemma wp_UseMemoize1 :
+  {{{ True }}}
+    UseMemoize1 #()
+  {{{ RET #(); True }}}.
+Proof.
+  wp_start as "_".
+
+  (*| Setting up the memoization is the most interesting part of the proof. To use the spec, we have to both supply a pure function that the function implements (it's `λ x, word.mul x x` in this case) and prove that it actually implements that function (the proof that immediately follows in curly braces). |*)
+  wp_apply (wp_NewMemoize (λ x, word.mul x x)).
+  {
+    rewrite /fun_implements.
+    iIntros (x).
+    (*| It's somewhat subtle but the proof at this point is a Hoare triple inside separation logic (you can tell because of the `------∗` line). `wp_start` knows how to handle this so you can use it in the same way. |*)
+    wp_start as "_".
+    wp_pures.
+    iModIntro. iApply "HΦ". done.
+  }
+
+  iIntros (v) "Hm".
+  wp_pures.
+  wp_apply (wp_Memoize__Call with "[$Hm]"). iIntros "Hm".
+  wp_pures.
+  wp_apply wp_Assert.
+  { rewrite bool_decide_eq_true_2 //. }
+  wp_pures.
+  wp_apply (wp_Memoize__Call with "[$Hm]"). iIntros "Hm".
+  wp_pures.
+  wp_apply wp_Assert.
+  { rewrite bool_decide_eq_true_2 //. }
+  wp_apply (wp_Memoize__Call with "[$Hm]"). iIntros "Hm".
+  wp_pures.
+  wp_apply wp_Assert.
+  { rewrite bool_decide_eq_true_2 //. }
+  wp_pures.
+  iModIntro.
+  iApply "HΦ".
+  done.
+Qed.
+
+(*| The second example is more interesting because the function we're memoizing doesn't _seem_ to be pure: it refers to the `s` slice passed to `UseMemoize2`.
+
+Nonetheless in the context of the function we can give it a pure specification, in terms of the values of that slice.
+
+To prove the Hoare triple we will need to make the slice read-only. This will turn `own_slice_small s uint64T (DfracOwn 1) xs` into `own_slice_small s uint64T DfracDiscarded xs` - the special fraction `DfracDiscarded` is how the implementation represents a persistent assertion.
+ This is just like turning `l ↦[uint64T] v` into `l ↦[uint64T]□ v` - the fraction in `own_slice_small` plays the same role as it does for points-to assertions.
+
+Think about what would happen we didn't make the slice read-only. When we call `NewMemoize` we can prove the function sums the list `[x1; x2; x3]`, since that's the initial value of the slice elements. If the slice were read-write, after `NewMemoize`, we could then change the slice, at which point it would no longer sum `[x1; x2; x3]`, and `Call` would no longer work as specified above. |*)
+
+(* don't worry too much about how this is defined; it's standard functional programming list stuff (read up on [foldl] and [foldr] if you're interested) *)
+Definition list_w64_sum : list w64 → w64 :=
+  foldl word.add (W64 0).
+
+Lemma list_w64_sum_app1 (xs: list w64) (x: w64) :
+  list_w64_sum (xs ++ [x]) = word.add (list_w64_sum xs) x.
+Proof.
+  rewrite /list_w64_sum.
+  rewrite foldl_app //.
+Qed.
+
+Lemma wp_UseMemoize2 (s: Slice.t) (x1 x2 x3: w64) :
+  {{{ own_slice_small s uint64T (DfracOwn 1) [x1; x2; x3] }}}
+    UseMemoize2 s
+  {{{ RET #(); True }}}.
+Proof.
+  wp_start as "Hs".
+  wp_pures.
+  iDestruct (own_slice_small_sz with "Hs") as %Hsz.
+  iMod (own_slice_small_persist with "Hs") as "#Hs".
+  simpl in Hsz.
+
+  wp_apply (wp_NewMemoize (λ (x: w64),
+                if decide (uint.Z x ≤ 3) then
+                  list_w64_sum (take (uint.nat x) [x1; x2; x3])
+                else W64 0
+           )).
+  {
+    rewrite /fun_implements. iIntros (n).
+    (*| Notice how the slice is available in the persistent context for this Hoare triple - this is only possible because we made it persistent and thus promised (for the duration of the proof) not to write to it.
+
+The rest of this proof is general loop and slice reasoning and not related to this specific example.
+|*)
+    wp_start as "_".
+    wp_apply (wp_slice_len). wp_pures.
+    wp_if_destruct.
+    { iModIntro.
+      simpl in Hsz.
+      rewrite decide_False; [ | word ].
+      iApply "HΦ"; done.
+    }
+    wp_alloc sum_l as "sum".
+    wp_alloc i_l as "i".
+    wp_pures.
+    wp_apply (wp_forUpto
+                (λ i,
+                  "sum" :: sum_l ↦[uint64T] #(list_w64_sum (take (uint.nat i) [x1; x2; x3]))
+                )%I
+               with "[] [$i $sum]").
+    { word. }
+    {  iIntros (i). wp_start as "H". iNamed "H".
+       iDestruct "H" as "[i %Hlt]".
+       wp_load.
+       wp_load.
+       list_elem [x1; x2; x3] i as x_i.
+       wp_apply (wp_SliceGet with "[$Hs]").
+       { eauto. }
+       iIntros "_".
+       wp_store.
+       iModIntro. iApply "HΦ". iFrame.
+       replace (uint.nat (word.add i (W64 1))) with (S (uint.nat i)) by word.
+       erewrite take_S_r; eauto.
+       rewrite list_w64_sum_app1.
+       iExact "sum". }
+    iIntros "[H Hi]". iNamed "H".
+    wp_load.
+    iModIntro.
+
+    (*| The little proof pattern below of using `iExactEq` is sometimes useful - it allows you to use any `"H": P` to prove `Q` if you can prove `P = Q`. This often has to be paired with `repeat f_equal` since you'll otherwise have `#(...) = #(...)` and you generally want to get rid of the `#` function in front of both sides. |*)
+    iDestruct ("HΦ" with "[]") as "HΦ".
+    { done. }
+    iExactEq "HΦ". repeat f_equal.
+
+    rewrite decide_True; [ | word ].
+    auto.
+  }
+
+  iIntros (m) "Hm".
+  (*| Here we come back from calling `NewMemoize`. As in `UseMemoize1`, all the hard work is done and calling the new object is easy. |*)
+  wp_pures.
+  wp_apply (wp_Memoize__Call with "[$Hm]"). iIntros "Hm".
+  wp_pures.
+  wp_apply (wp_Memoize__Call with "[$Hm]"). iIntros "Hm".
+  wp_pures.
+  wp_apply (wp_Assert).
+  { rewrite bool_decide_eq_true_2 //. }
+  wp_pures.
+  iModIntro. iApply "HΦ". done.
 Qed.
 
 End proof.

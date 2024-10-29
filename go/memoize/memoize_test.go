@@ -27,3 +27,12 @@ func TestMockMemoize(t *testing.T) {
 	assert.Equal(uint64(4), m.Call(2))
 	assert.Equal(uint64(1), m.Call(1))
 }
+
+func TestMemoizeClient1(t *testing.T) {
+	UseMemoize1()
+}
+
+func TestMemoizeClient2(t *testing.T) {
+	s := []uint64{123, 1, 100, 66, 89}
+	UseMemoize2(s)
+}

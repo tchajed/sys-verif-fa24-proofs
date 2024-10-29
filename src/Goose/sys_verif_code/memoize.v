@@ -4,6 +4,7 @@ From Perennial.goose_lang Require Import prelude.
 Section code.
 Context `{ext_ty: ext_types}.
 
+(* Memoize wraps a (slow) function and caches its results *)
 Definition Memoize := struct.decl [
   "f" :: (uint64T -> uint64T)%ht;
   "results" :: mapT uint64T
@@ -25,6 +26,38 @@ Definition Memoize__Call: val :=
       let: "y" := (struct.get Memoize "f" "m") "x" in
       MapInsert (struct.get Memoize "results" "m") "x" "y";;
       "y").
+
+Definition UseMemoize1: val :=
+  rec: "UseMemoize1" <> :=
+    let: "m" := NewMemoize (λ: "x",
+      "x" * "x"
+      ) in
+    let: "y1" := Memoize__Call "m" #3 in
+    control.impl.Assert ("y1" = #9);;
+    let: "y2" := Memoize__Call "m" #3 in
+    control.impl.Assert ("y2" = #9);;
+    let: "y3" := Memoize__Call "m" #5 in
+    control.impl.Assert ("y3" = #25);;
+    #().
+
+Definition UseMemoize2: val :=
+  rec: "UseMemoize2" "s" :=
+    let: "sumUpto" := (λ: "n",
+      (if: "n" > (slice.len "s")
+      then #0
+      else
+        let: "sum" := ref (zero_val uint64T) in
+        let: "i" := ref_to uint64T #0 in
+        (for: (λ: <>, (![uint64T] "i") < "n"); (λ: <>, "i" <-[uint64T] ((![uint64T] "i") + #1)) := λ: <>,
+          "sum" <-[uint64T] ((![uint64T] "sum") + (SliceGet uint64T "s" (![uint64T] "i")));;
+          Continue);;
+        ![uint64T] "sum")
+      ) in
+    let: "m" := NewMemoize "sumUpto" in
+    let: "y1" := Memoize__Call "m" #3 in
+    let: "y2" := Memoize__Call "m" #3 in
+    control.impl.Assert ("y1" = "y2");;
+    #().
 
 (* MockMemoize has the same API as Memoize but with an implementation that
    doesn't actually save any results. *)
