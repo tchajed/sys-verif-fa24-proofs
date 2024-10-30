@@ -125,4 +125,50 @@ Definition ParallelAdd2: val :=
     Mutex__Unlock "m";;
     "x_now".
 
+(* examples.go *)
+
+Definition SetX: val :=
+  rec: "SetX" "x" :=
+    "x" <-[uint64T] #1;;
+    #().
+
+Definition NoGo: val :=
+  rec: "NoGo" <> :=
+    let: "x" := ref (zero_val uint64T) in
+    SetX "x";;
+    #().
+
+Definition FirstGo: val :=
+  rec: "FirstGo" <> :=
+    let: "x" := ref (zero_val uint64T) in
+    Fork (SetX "x");;
+    #().
+
+Definition FirstLock: val :=
+  rec: "FirstLock" <> :=
+    let: "x" := ref (zero_val uint64T) in
+    let: "m" := newMutex #() in
+    Fork (Mutex__Lock "m";;
+          "x" <-[uint64T] #1;;
+          Mutex__Unlock "m");;
+    Mutex__Lock "m";;
+    let: "y" := ![uint64T] "x" in
+    Mutex__Unlock "m";;
+    "y".
+
+Definition LockedCounter: val :=
+  rec: "LockedCounter" <> :=
+    let: "counter" := ref (zero_val uint64T) in
+    let: "m" := newMutex #() in
+    Fork (Mutex__Lock "m";;
+          "counter" <-[uint64T] ((![uint64T] "counter") + #2);;
+          Mutex__Unlock "m");;
+    Fork (Mutex__Lock "m";;
+          "counter" <-[uint64T] ((![uint64T] "counter") + #2);;
+          Mutex__Unlock "m");;
+    Mutex__Lock "m";;
+    let: "y" := ![uint64T] "counter" in
+    Mutex__Unlock "m";;
+    "y".
+
 End code.
