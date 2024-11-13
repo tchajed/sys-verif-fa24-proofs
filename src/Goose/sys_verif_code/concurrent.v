@@ -125,6 +125,51 @@ Definition ParallelAdd2: val :=
     Mutex__Unlock "m";;
     "x_now".
 
+Definition ParallelAdd3: val :=
+  rec: "ParallelAdd3" <> :=
+    let: "m" := newMutex #() in
+    let: "i" := ref_to uint64T #0 in
+    let: "h1" := std.Spawn (λ: <>,
+      Mutex__Lock "m";;
+      "i" <-[uint64T] ((![uint64T] "i") + #2);;
+      Mutex__Unlock "m";;
+      #()
+      ) in
+    let: "h2" := std.Spawn (λ: <>,
+      Mutex__Lock "m";;
+      "i" <-[uint64T] ((![uint64T] "i") + #2);;
+      Mutex__Unlock "m";;
+      #()
+      ) in
+    std.JoinHandle__Join "h1";;
+    std.JoinHandle__Join "h2";;
+    Mutex__Lock "m";;
+    let: "y" := ![uint64T] "i" in
+    Mutex__Unlock "m";;
+    "y".
+
+Definition ParallelAdd_Nthreads: val :=
+  rec: "ParallelAdd_Nthreads" "n" :=
+    let: "m" := newMutex #() in
+    let: "i" := ref_to uint64T #0 in
+    let: "handles" := ref (zero_val (slice.T ptrT)) in
+    let: "thread_i" := ref_to uint64T #0 in
+    (for: (λ: <>, (![uint64T] "thread_i") < "n"); (λ: <>, "thread_i" <-[uint64T] ((![uint64T] "thread_i") + #1)) := λ: <>,
+      let: "h" := std.Spawn (λ: <>,
+        Mutex__Lock "m";;
+        "i" <-[uint64T] (std.SumAssumeNoOverflow (![uint64T] "i") #2);;
+        Mutex__Unlock "m";;
+        #()
+        ) in
+      "handles" <-[slice.T ptrT] (SliceAppend ptrT (![slice.T ptrT] "handles") "h");;
+      Continue);;
+    ForSlice ptrT <> "h" (![slice.T ptrT] "handles")
+      (std.JoinHandle__Join "h");;
+    Mutex__Lock "m";;
+    let: "y" := ![uint64T] "i" in
+    Mutex__Unlock "m";;
+    "y".
+
 (* examples.go *)
 
 Definition SetX: val :=

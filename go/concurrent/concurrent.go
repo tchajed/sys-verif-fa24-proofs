@@ -68,3 +68,45 @@ func ParallelAdd2() uint64 {
 	m.Unlock()
 	return x_now
 }
+
+func ParallelAdd3() uint64 {
+	m := new(sync.Mutex)
+	var i uint64 = 0
+	h1 := std.Spawn(func() {
+		m.Lock()
+		i += 2
+		m.Unlock()
+	})
+	h2 := std.Spawn(func() {
+		m.Lock()
+		i += 2
+		m.Unlock()
+	})
+	h1.Join()
+	h2.Join()
+	m.Lock()
+	y := i
+	m.Unlock()
+	return y
+}
+
+func ParallelAdd_Nthreads(n uint64) uint64 {
+	m := new(sync.Mutex)
+	var i uint64 = 0
+	var handles []*std.JoinHandle
+	for thread_i := uint64(0); thread_i < n; thread_i++ {
+		h := std.Spawn(func() {
+			m.Lock()
+			i = std.SumAssumeNoOverflow(i, 2)
+			m.Unlock()
+		})
+		handles = append(handles, h)
+	}
+	for _, h := range handles {
+		h.Join()
+	}
+	m.Lock()
+	y := i
+	m.Unlock()
+	return y
+}
