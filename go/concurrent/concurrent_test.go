@@ -1,6 +1,7 @@
 package concurrent
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -80,4 +81,17 @@ func TestBarrierN(t *testing.T) {
 func TestBarrierNoAdd(t *testing.T) {
 	b := NewBarrier()
 	b.Wait()
+}
+
+func UseBarrierPrint() {
+	b := NewBarrier()
+	for i := 0; i < 3; i++ {
+		b.Add(1)
+		go func() {
+			fmt.Printf("hello %d\n", i)
+			b.Done()
+		}()
+	}
+	b.Wait()
+
 }
