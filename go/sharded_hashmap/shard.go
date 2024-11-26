@@ -7,6 +7,8 @@ package sharded_hashmap
 // This is used within each bucket and protected by a lock, so it does not need
 // to be thread safe.
 
+// A shard is logically a map from uint32 to uint64. It is not safe for
+// concurrent use.
 type shard struct {
 	// we use a map from uint64 due to a goose limitation
 	m map[uint64]uint64

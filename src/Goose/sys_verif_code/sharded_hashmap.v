@@ -64,6 +64,8 @@ Definition entryShard__Store: val :=
 
 (* shard.go *)
 
+(* A shard is logically a map from uint32 to uint64. It is not safe for
+   concurrent use. *)
 Definition shard := struct.decl [
   "m" :: mapT uint64T
 ].
@@ -86,6 +88,17 @@ Definition shard__Store: val :=
 
 (* sharded_hashmap.go *)
 
+(* Package sharded_hashmap implements a concurrent hashmap with per-bucket
+   locking.
+
+   It does not have dynamic resizing, which is tricky to implement concurrently
+   with other operations. *)
+
+(* hash is an arbitrary hash function for uint32
+
+   Goose doesn't expose any real hash function (like hash/fnv or crypto.SHA512),
+   so we need to implement our own. The actual hash function doesn't matter for
+   correctness, though; it only needs to be deterministic. *)
 Definition hash: val :=
   rec: "hash" "key" :=
     let: "h" := ref_to uint32T #(U32 5381) in
@@ -101,6 +114,8 @@ Definition bucket := struct.decl [
   "subMap" :: ptrT
 ].
 
+(* HashMap implements a map from uint32 to uint64 with expected concurrent
+   access to different keys. *)
 Definition HashMap := struct.decl [
   "buckets" :: slice.T ptrT
 ].
@@ -122,6 +137,10 @@ Definition createNewBuckets: val :=
       Continue);;
     ![slice.T ptrT] "newBuckets".
 
+(* NewHashMap creates a hashmap with size buckets.
+
+   Larger size will consume some memory for the additional locks, but will
+   improve concurrency by reducing the number of hash collisions. *)
 Definition NewHashMap: val :=
   rec: "NewHashMap" "size" :=
     struct.new HashMap [
@@ -132,6 +151,8 @@ Definition bucketIdx: val :=
   rec: "bucketIdx" "key" "numBuckets" :=
     to_u64 ((hash "key") `rem` (to_u32 "numBuckets")).
 
+(* Load gets a key from the map and returns (v, ok). If ok is false then the key
+   was not found. *)
 Definition HashMap__Load: val :=
   rec: "HashMap__Load" "hm" "key" :=
     let: "buckets" := struct.loadF HashMap "buckets" "hm" in
@@ -141,6 +162,7 @@ Definition HashMap__Load: val :=
     Mutex__Unlock (struct.loadF bucket "mu" "b");;
     ("x", "ok").
 
+(* Store inserts a key into the map. *)
 Definition HashMap__Store: val :=
   rec: "HashMap__Store" "hm" "key" "val" :=
     let: "buckets" := struct.loadF HashMap "buckets" "hm" in

@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/goose-lang/primitive v0.1.0
 	github.com/goose-lang/std v0.5.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	pgregory.net/rapid v1.1.0
 )
 
