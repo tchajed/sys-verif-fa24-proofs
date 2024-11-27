@@ -5,6 +5,7 @@ type Person struct {
 	Age  uint64
 }
 
+// Sort sorts arr by increasing Age.
 func Sort(arr []Person) {
 	// Bubble sort arr in-place
 	l := uint64(len(arr))

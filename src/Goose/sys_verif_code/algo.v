@@ -9,6 +9,7 @@ Definition Person := struct.decl [
   "Age" :: uint64T
 ].
 
+(* Sort sorts arr by increasing Age. *)
 Definition Sort: val :=
   rec: "Sort" "arr" :=
     let: "l" := slice.len "arr" in
