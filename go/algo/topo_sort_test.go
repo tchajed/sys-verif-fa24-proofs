@@ -87,14 +87,15 @@ func TestTopoSortProperties(t *testing.T) {
 			return isAcyclic(g)
 		}).Draw(t, "g")
 		order := algo.TopoSort(g)
-		assert.ElementsMatch(g.Nodes, order)
-		for _, e := range g.Edges {
-			// indices will be valid since elements match
-			assert.Less(
-				slices.Index(order, e.Src),
-				slices.Index(order, e.Dst),
-				"graph ordering not followed",
-			)
+		if assert.ElementsMatch(g.Nodes, order) {
+			for _, e := range g.Edges {
+				// indices will be valid since elements match
+				assert.Less(
+					slices.Index(order, e.Src),
+					slices.Index(order, e.Dst),
+					"graph ordering not followed",
+				)
+			}
 		}
 	})
 }
